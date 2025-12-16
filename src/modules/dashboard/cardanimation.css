@@ -1,0 +1,188 @@
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap");
+
+:root {
+  /* --bg: #d8d2d2; */
+  --fg: #1b1616;
+  --card-1: #d69811;
+  --card-2: #ce2017;
+  --card-3: #32149e;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Instrument Serif", sans-serif;
+}
+
+img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+h1 {
+  font-size: 4rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+p {
+  font-size: 2rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* No global section rules */
+section {
+  position: relative;
+  width: 100%;
+}
+
+/* Sticky section only */
+section.sticky {
+  min-height: 100vh;
+  padding: 2rem;
+  background-color: var(--bg);
+  color: var(--fg);
+  margin: 0 !important;
+}
+
+.sticky {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.sticky-header {
+  position: absolute;
+  top: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.sticky-header h1 {
+  position: relative;
+  text-align: center;
+  will-change: transform, opacity;
+  transform: translateY(40px);
+  opacity: 0;
+}
+
+.card-container {
+  position: relative;
+  width: 75%;
+  display: flex;
+  perspective: 1200px;
+  transform: translateY(40px);
+  will-change: width, gap;
+  gap: 0;
+}
+
+.card {
+  position: relative;
+  flex: 1;
+  aspect-ratio: 5/7;
+  transform-style: preserve-3d;
+  transform-origin: center;
+  transition: none !important;
+}
+
+#card-1 {
+  border-radius: 20px 0 0 20px;
+}
+
+#card-3 {
+  border-radius: 0 20px 20px 0;
+}
+
+.card-front,
+.card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: inherit;
+  overflow: hidden;
+  transform-style: preserve-3d;
+}
+
+.card-back {
+  transform: rotateY(180deg);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+.card-back span {
+  position: absolute;
+  top: 2rem;
+  left: 2rem;
+  opacity: 0.4;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+#card-1 .card-back {
+  background-color: var(--card-1);
+  color: var(--bg);
+}
+
+#card-2 .card-back {
+  background-color: var(--card-2);
+  color: white;
+}
+
+#card-3 .card-back {
+  background-color: var(--card-3);
+  color: white;
+}
+
+@media (max-width: 1000px) {
+  h1 {
+    font-size: 3rem;
+  }
+
+  .sticky {
+    height: max-content;
+    padding: 4rem 2rem;
+    flex-direction: column;
+  }
+
+  .sticky-header {
+    position: relative;
+    top: 0;
+    left: 0;
+    transform: none;
+    margin-bottom: 4rem;
+  }
+
+  .sticky-header h1 {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .card-container {
+    width: 100%;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    border-radius: 20px !important;
+  }
+
+  .card-back {
+    transform: none;
+  }
+}

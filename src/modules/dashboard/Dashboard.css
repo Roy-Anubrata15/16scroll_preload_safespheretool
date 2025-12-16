@@ -417,7 +417,7 @@
 
 /* Progress layer */
 .preloader-progress {
-  background-color: #ffffff; /* same as body background to avoid visible edges */
+  background-color: transparent; /* same as body background to avoid visible edges */
   z-index: 1;
   will-change: opacity;
 }
@@ -431,7 +431,7 @@
   height: 140px;
   transform: translate(-50%, -50%);
   border-radius: 999px;
-  background: #a7bee7; /* soft indigo-tinted pill */
+  background: #000000; /* soft indigo-tinted pill */
   box-shadow: 0 40px 80px rgba(15, 23, 42, 0.15);
   overflow: hidden;
 }
@@ -499,7 +499,7 @@
 
 
 
-
+/* 
 section
 
 {
@@ -507,7 +507,7 @@ section
   overflow: hidden;
   width: 100vw;
   height: 100svh;
-}
+} */
 .gradient-canvas {
   position: absolute;
 top: 0;

@@ -211,12 +211,11 @@ const config = {
   fluidDecay: 0.98,
   trailLength: 0.8,
   stopDecay: 0.85,
-
-
-  color1: "#ffffff",    
-  color2: "4ea8de",
-  color3: "4ea8de",
-  color4: "",
+  
+  color1: "#b8fff7"    ,
+  color2: "#6e3466",
+  color3: "#0133ff",
+  color4: "#66d1fe",
   colorIntensity: 1.0,
   softness: 1.0,
 };
