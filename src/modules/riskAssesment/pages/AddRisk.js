@@ -1,65 +1,69 @@
-// import React from 'react';
-// import { useHistory } from 'react-router-dom';
-// import MultiStepFormManager from '../components/forms/MultiStepFormManager';
-// import '../styles/GlobalStyles.css';
-
-// const AddRisk = () => {
-//   const history = useHistory();
-
-//   const handleSubmit = (formData) => {
-//     console.log('Risk Assessment Data:', formData);
-//     // Here you would typically save the data to your backend or state management
-//     // For now, we'll just redirect to the saved risks page
-//     alert('Risk Assessment submitted successfully!');
-//     history.push('/risk-assessment');
-//   };
-
-//   const handleCancel = () => {
-//     history.push('/risk-assessment');
-//   };
-
-//   return (
-//     <div className="page-container">
-//       <div className="page-header">
-//         <h1>Add New Risk Assessment</h1>
-//       </div>
-
-//       <MultiStepFormManager
-//         onSubmit={handleSubmit}
-//         onCancel={handleCancel}
-//       />
-//     </div>
-//   );
-// };
-
-// export default AddRisk;
-
-// import React from 'react';
-// import { useLocation } from 'react-router-dom';
-// import MultiStepFormManager from '../components/forms/MultiStepFormManager';
-
-// const AddRisk = () => {
-//   const location = useLocation();
-//   const focusArea = location.state?.focusArea || 'risk';
-
-//   const handleSubmit = (formData) => {
-//     console.log('Risk Assessment Data:', formData);
-//   };
-
-//   return (
-//     <div>
-//       <MultiStepFormManager onSubmit={handleSubmit} focusArea={focusArea} />
-
-//           </div>
-
-//   );
-// };
-
-// export default AddRisk;
-
-import React,{useEffect,useState} from "react";
+import React, { useEffect, useState } from "react";
 import { useHistory, useLocation } from "react-router-dom";
 import MultiStepFormManager from "../components/forms/MultiStepFormManager";
+
+const addRiskStyles = `
+  .addrisk-page {
+    padding: 24px 32px 0 32px;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+
+  .addrisk-back-btn {
+    position: sticky;
+    top: 0;
+    margin-bottom: 16px;
+    padding: 10px 24px;
+    border-radius: 8px;
+    background: #005fcc;
+    border: none;
+    color: #fff;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    z-index: 999;
+  }
+
+  .addrisk-back-btn--hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+
+  .addrisk-back-btn--visible {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  /* Small phones */
+  @media (max-width: 480px) {
+    .addrisk-page {
+      padding: 16px 12px 0 12px;
+    }
+
+    .addrisk-back-btn {
+      width: 100%;
+      margin-bottom: 12px;
+      font-size: 13px;
+      padding: 10px 16px;
+    }
+  }
+
+  /* Tablets */
+  @media (min-width: 481px) and (max-width: 768px) {
+    .addrisk-page {
+      padding: 20px 20px 0 20px;
+    }
+  }
+
+  /* Large desktop */
+  @media (min-width: 1200px) {
+    .addrisk-page {
+      max-width: 1280px;
+    }
+  }
+`;
 
 const AddRisk = () => {
   const history = useHistory();
@@ -72,51 +76,34 @@ const AddRisk = () => {
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > lastScrollY) {
-        // Scrolling down
         setShowButtons(false);
       } else {
-        // Scrolling up
         setShowButtons(true);
       }
       setLastScrollY(window.scrollY);
     };
 
     window.addEventListener("scroll", handleScroll);
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
+    return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
   const handleSubmit = (formData) => {
     console.log("Risk Assessment Data:", formData);
-    // submission logic here...
+    // submission logic...
   };
 
   return (
-    <div className="page-container" style={{ padding: "30px 40px 0px 40px" }}>
+    <div className="addrisk-page">
+      {/* inject styles */}
+      <style>{addRiskStyles}</style>
+
       <button
-        style={{
-          position: "sticky",
-          top: "0",
-          margin: "10px",
-          padding: "10px 24px",
-          borderRadius: "8px",
-          background: "#005FCC",
-          border: "none",
-          color: "#fff",
-          fontWeight: "500",
-          fontSize: "14px",
-          cursor: "pointer",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-          transition: "transform 0.3s ease, opacity 0.3s ease",
-          zIndex: 999,
-          transform: showButtons ? "translateY(0)" : "translateY(-100%)",
-          opacity: showButtons ? 1 : 0,
-        }}
+        className={`addrisk-back-btn ${
+          showButtons ? "addrisk-back-btn--visible" : "addrisk-back-btn--hidden"
+        }`}
         onClick={() => history.push("/risk-assessment")}
       >
-        ← Back to Dashboard{" "}
+        ← Back to Dashboard
       </button>
 
       <MultiStepFormManager onSubmit={handleSubmit} focusArea={focusArea} />

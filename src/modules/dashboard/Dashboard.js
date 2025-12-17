@@ -2,8 +2,12 @@
 import React from 'react';
 import TextScrollAnimation from './TextScrollAnimation';
 import SplitCardAnimation from './SplitCardAnimation';
+import Horizontalscroll  from './horizontalscroll';
 import './cardanimation.css'; // Include both CSS files
 import './textreveal.css';
+import './horizontalscroll.css'
+import SprintoReplica from "./SprintoReplica"
+
 
 const Dashboard = () => {
   return (
@@ -16,6 +20,10 @@ const Dashboard = () => {
       
       {/* Second: Card Animation */}
       <SplitCardAnimation />
+        
+        <SprintoReplica/>
+        <Horizontalscroll/>
+    
     </div>
   );
 };

@@ -5,8 +5,181 @@ import TreatmentPlanForm from "./TreatmentPlanForm";
 import ResidualRiskForm from "./ResidualRiskForm";
 import riskService from "../../services/riskService";
 import TaskManagement from "../../pages/TaskManagement";
-
 import Modal from "../../../../components/navigations/Modal";
+
+const multiStepStyles = `
+  .msf-wrapper {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 16px 16px 80px 16px;
+    min-height: 70vh;
+    box-sizing: border-box;
+  }
+
+  .msf-layout {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .msf-stepper {
+    position: sticky;
+    top: 90px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    z-index: 1;
+  }
+
+  .msf-step {
+    display: flex;
+    align-items: center;
+  }
+
+  .msf-step-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .msf-step-label {
+    margin-left: 8px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .msf-main {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+  }
+
+  .msf-nav {
+    position: fixed;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: 100;
+    background: transparent;
+  }
+
+  .msf-btn {
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 110px;
+    border: none;
+    cursor: pointer;
+  }
+
+  .msf-btn--prev {
+    background-color: #ffffff;
+    color: #7f8c8d;
+    border: 1px solid #ecf0f1;
+  }
+
+  .msf-btn--save {
+    background: linear-gradient(45deg,#6c5ce7,#0984e3);
+    color: #ffffff;
+  }
+
+  .msf-btn--save:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+  }
+
+  .msf-btn--next {
+    background-color: #3498db;
+    color: #ffffff;
+  }
+
+  .msf-btn--next:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+  }
+
+  .msf-btn--submit {
+    background: linear-gradient(45deg,#27ae60,#2ecc71);
+    color: #ffffff;
+  }
+
+  .msf-btn--submit-edit {
+    background: linear-gradient(45deg,#e67e22,#f39c12);
+    color: #ffffff;
+  }
+
+  /* MOBILE (stepper on top, full-width form, nav bar stacked) */
+  @media (max-width: 768px) {
+    .msf-wrapper {
+      padding: 12px 10px 90px 10px;
+    }
+
+    .msf-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .msf-stepper {
+      position: static;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .msf-step {
+      margin-bottom: 0;
+    }
+
+    .msf-step-label {
+      display: none; /* keep just circles on very small screens */
+    }
+
+    .msf-main {
+      margin: 0;
+      padding: 16px 12px;
+    }
+
+    .msf-nav {
+      bottom: 8px;
+      left: 0;
+      right: 0;
+      transform: none;
+      justify-content: center;
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(6px);
+      box-sizing: border-box;
+    }
+
+    .msf-btn {
+      flex: 1;
+      min-width: 0;
+      font-size: 13px;
+      padding: 8px 10px;
+    }
+  }
+
+  /* LARGE DESKTOP */
+  @media (min-width: 1200px) {
+    .msf-wrapper {
+      max-width: 1280px;
+    }
+  }
+`;
 
 const MultiStepFormManager = ({ onSubmit, focusArea = "risk" }) => {
   const history = useHistory();
@@ -26,11 +199,10 @@ const MultiStepFormManager = ({ onSubmit, focusArea = "risk" }) => {
   };
 
   const closeModal = () => {
-    setModal({ ...modal, isOpen: false });
+    setModal((m) => ({ ...m, isOpen: false }));
   };
 
   const [departments, setDepartments] = useState([]);
-
   const user = JSON.parse(sessionStorage.getItem("user"));
   const [tasks, setTasks] = useState([]);
   const [currentStep, setCurrentStep] = useState(1);
@@ -55,28 +227,22 @@ const MultiStepFormManager = ({ onSubmit, focusArea = "risk" }) => {
     additionalControls: "",
     numberOfDays: "",
     deadlineDate: "",
-    status:"Open",
-    organization: user.organization, // <-- add this
+    status: "Open",
+    organization: user.organization,
   });
 
   useEffect(() => {
     async function loadDepartments() {
       try {
         const token = sessionStorage.getItem("token");
-
         const res = await fetch(
           "https://safesphere.duckdns.org/user-service/api/departments",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         const data = await res.json();
-
-        // Filter departments by user's organization
         const filtered = Array.isArray(data)
           ? data.filter((dept) => dept.organization === user?.organization)
           : [];
-
         setDepartments(filtered);
       } catch (err) {
         console.error("Error fetching departments:", err);
@@ -90,8 +256,6 @@ const MultiStepFormManager = ({ onSubmit, focusArea = "risk" }) => {
   useEffect(() => {
     async function loadRisks() {
       const allRisks = await riskService.getAllRisks();
-
-      // only get IDs for the user's organization
       const orgRiskIds = allRisks
         .filter((risk) => risk.organization === user.department.organization)
         .map((risk) => risk.riskId);
@@ -100,14 +264,13 @@ const MultiStepFormManager = ({ onSubmit, focusArea = "risk" }) => {
 
       if (isEditing && existingRiskId) {
         const existingRisk = await riskService.getRiskById(existingRiskId);
-        if (existingRisk) {
-          setFormData(existingRisk);
-        }
+        if (existingRisk) setFormData(existingRisk);
       } else if (!formData.riskId) {
         generateRiskId(orgRiskIds);
       }
     }
     loadRisks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing, existingRiskId]);
 
   const generateRiskId = (excludeIds = []) => {
@@ -122,12 +285,12 @@ const MultiStepFormManager = ({ onSubmit, focusArea = "risk" }) => {
       nextNumber++;
     } while (riskIdsToCheck.includes(newRiskId));
 
-    setFormData((prevData) => ({ ...prevData, riskId: newRiskId }));
+    setFormData((prev) => ({ ...prev, riskId: newRiskId }));
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({ ...prevData, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const isStep1Valid = () => {
@@ -169,20 +332,18 @@ const MultiStepFormManager = ({ onSubmit, focusArea = "risk" }) => {
       showModal("⛔ Access Restricted", "You can save and exit only.");
       return;
     }
-    if (currentStep < 3) setCurrentStep(currentStep + 1);
+    if (currentStep < 3) setCurrentStep((s) => s + 1);
   };
 
   const handlePrevious = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
+    if (currentStep > 1) setCurrentStep((s) => s - 1);
   };
 
   const handleSave = async () => {
     try {
       const savedRisk = await riskService.saveRisk(formData);
-
       const modalData = getModalMessageByStep(currentStep, isEditing);
       showModal(modalData.title, modalData.message);
-
       if (onSubmit) onSubmit(savedRisk);
     } catch (error) {
       console.error("Error saving draft:", error);
@@ -190,33 +351,27 @@ const MultiStepFormManager = ({ onSubmit, focusArea = "risk" }) => {
     }
   };
 
-  const getModalMessageByStep = (step, isEditing = false) => {
+  const getModalMessageByStep = (step, isEdit = false) => {
     switch (step) {
       case 1:
         return {
-          title: isEditing ? "Step 1 Updated!" : "Step 1 Saved!",
+          title: isEdit ? "Step 1 Updated!" : "Step 1 Saved!",
           message:
             "Risk details have been saved successfully. Click next for Treatment",
         };
-
       case 2:
         return {
-          title: isEditing ? "Treatment Updated!" : "Treatment Saved!",
+          title: isEdit ? "Treatment Updated!" : "Treatment Saved!",
           message:
             "Risk treatment plan has been saved. Click next for Task Management",
         };
-
       case 3:
         return {
-          title: isEditing ? "Tasks Updated!" : "Tasks Saved!",
+          title: isEdit ? "Tasks Updated!" : "Tasks Saved!",
           message: "Tasks for this risk have been saved.",
         };
-
       default:
-        return {
-          title: "Saved!",
-          message: "Your progress has been saved.",
-        };
+        return { title: "Saved!", message: "Your progress has been saved." };
     }
   };
 
@@ -253,9 +408,7 @@ const MultiStepFormManager = ({ onSubmit, focusArea = "risk" }) => {
         );
       case 2:
         return (
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "15px" }}
-          >
+          <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
             <div
               style={{
                 background: "white",
@@ -268,7 +421,6 @@ const MultiStepFormManager = ({ onSubmit, focusArea = "risk" }) => {
                 formData={formData}
                 handleInputChange={handleInputChange}
               />
-              <h4 style={{ marginBottom: "10px", color: "#2c3e50" }}></h4>
               <ResidualRiskForm
                 formData={formData}
                 handleInputChange={handleInputChange}
@@ -312,117 +464,63 @@ const MultiStepFormManager = ({ onSubmit, focusArea = "risk" }) => {
     }
   };
 
-  return (
-    <div
-      style={{
-        maxWidth: "900px",
-        margin: "0 auto",
-        padding: "15px",
-        minHeight: "70vh",
-      }}
-    >
-      {/* Stepper */}
-      <div
-        style={{
-          position: "fixed",
-          top: "50%",
-          left: "15px",
-          transform: "translateY(-50%)",
-          display: "flex",
-          flexDirection: "column",
-          zIndex: 900,
-        }}
-      >
-        {[1, 2, 3].map((step, index) => (
-          <div
-            key={step}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              marginBottom: index < 2 ? "30px" : 0,
-            }}
-          >
-            <div
-              style={{
-                width: "38px",
-                height: "38px",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor:
-                  currentStep === step
-                    ? "#2980b9"
-                    : currentStep > step
-                    ? "#3498db"
-                    : "#ecf0f1",
-                color: currentStep >= step ? "white" : "#7f8c8d",
-                fontWeight: "600",
-                fontSize: "14px",
-                transform: currentStep === step ? "scale(1.15)" : "scale(1)",
-                transition: "all 0.3s ease",
-                boxShadow:
-                  currentStep >= step
-                    ? "0 2px 8px rgba(52, 152, 219, 0.3)"
-                    : "none",
-              }}
-            >
-              {step}
-            </div>
-            <span
-              style={{
-                marginLeft: "8px",
-                fontSize: "12px",
-                fontWeight: currentStep === step ? 600 : 500,
-                color: currentStep >= step ? "#3498db" : "#7f8c8d",
-              }}
-            >
-              {getStepLabel(step)}
-            </span>
-          </div>
-        ))}
-      </div>
+  const stepBg = (step) =>
+    currentStep === step
+      ? "#2980b9"
+      : currentStep > step
+      ? "#3498db"
+      : "#ecf0f1";
+  const stepColor = (step) =>
+    currentStep >= step ? "#ffffff" : "#7f8c8d";
+  const stepLabelColor = (step) =>
+    currentStep >= step ? "#3498db" : "#7f8c8d";
 
-      {/* Main Content */}
-      <div
-        style={{
-          marginLeft: "120px",
-          background: "white",
-          borderRadius: "12px",
-          padding: "20px",
-          marginBottom: "20px",
-          boxShadow: "0 3px 10px rgba(0, 0, 0, 0.08)",
-          border: "1px solid #e9ecef",
-        }}
-      >
-        {renderCurrentStep()}
+  return (
+    <div className="msf-wrapper">
+      <style>{multiStepStyles}</style>
+
+      <div className="msf-layout">
+        {/* Stepper */}
+        <div className="msf-stepper">
+          {[1, 2, 3].map((step) => (
+            <div key={step} className="msf-step">
+              <div
+                className="msf-step-circle"
+                style={{
+                  backgroundColor: stepBg(step),
+                  color: stepColor(step),
+                  transform: currentStep === step ? "scale(1.15)" : "scale(1)",
+                  boxShadow:
+                    currentStep >= step
+                      ? "0 2px 8px rgba(52,152,219,0.3)"
+                      : "none",
+                }}
+              >
+                {step}
+              </div>
+              <span
+                className="msf-step-label"
+                style={{
+                  fontWeight: currentStep === step ? 600 : 500,
+                  color: stepLabelColor(step),
+                }}
+              >
+                {getStepLabel(step)}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Main Content */}
+        <div className="msf-main">{renderCurrentStep()}</div>
       </div>
 
       {/* Navigation */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          display: "flex",
-          gap: "10px",
-          zIndex: 100,
-        }}
-      >
+      <div className="msf-nav">
         {currentStep > 1 && (
           <button
             onClick={handlePrevious}
-            style={{
-              padding: "10px 20px",
-              backgroundColor: "white",
-              color: "#7f8c8d",
-              border: "1px solid #ecf0f1",
-              borderRadius: "30px",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: "pointer",
-              minWidth: "110px",
-            }}
+            className="msf-btn msf-btn--prev"
           >
             ← Previous
           </button>
@@ -435,27 +533,7 @@ const MultiStepFormManager = ({ onSubmit, focusArea = "risk" }) => {
             (currentStep === 2 && !isStep2Valid()) ||
             (currentStep === 3 && !isStep3Valid())
           }
-          style={{
-            padding: "10px 20px",
-            background:
-              (currentStep === 1 && !isStep1Valid()) ||
-              (currentStep === 2 && !isStep2Valid()) ||
-              (currentStep === 3 && !isStep3Valid())
-                ? "#bdc3c7"
-                : "linear-gradient(45deg,#6c5ce7,#0984e3)",
-            color: "white",
-            border: "none",
-            borderRadius: "30px",
-            fontSize: "14px",
-            fontWeight: "600",
-            cursor:
-              (currentStep === 1 && !isStep1Valid()) ||
-              (currentStep === 2 && !isStep2Valid()) ||
-              (currentStep === 3 && !isStep3Valid())
-                ? "not-allowed"
-                : "pointer",
-            minWidth: "110px",
-          }}
+          className="msf-btn msf-btn--save"
         >
           Save
         </button>
@@ -464,17 +542,7 @@ const MultiStepFormManager = ({ onSubmit, focusArea = "risk" }) => {
           <button
             onClick={handleNext}
             disabled={getNextButtonDisabled()}
-            style={{
-              padding: "10px 20px",
-              backgroundColor: getNextButtonDisabled() ? "#bdc3c7" : "#3498db",
-              color: "white",
-              border: "none",
-              borderRadius: "30px",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: getNextButtonDisabled() ? "not-allowed" : "pointer",
-              minWidth: "110px",
-            }}
+            className="msf-btn msf-btn--next"
           >
             Next →
           </button>
@@ -483,24 +551,15 @@ const MultiStepFormManager = ({ onSubmit, focusArea = "risk" }) => {
         {currentStep === 3 && (
           <button
             onClick={handleSubmit}
-            style={{
-              padding: "10px 20px",
-              background: isEditing
-                ? "linear-gradient(45deg,#e67e22,#f39c12)"
-                : "linear-gradient(45deg,#27ae60,#2ecc71)",
-              color: "white",
-              border: "none",
-              borderRadius: "30px",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: "pointer",
-              minWidth: "110px",
-            }}
+            className={`msf-btn ${
+              isEditing ? "msf-btn--submit-edit" : "msf-btn--submit"
+            }`}
           >
             {isEditing ? "Save & Finish" : "Submit"}
           </button>
         )}
       </div>
+
       <Modal
         isOpen={modal.isOpen}
         title={modal.title}
