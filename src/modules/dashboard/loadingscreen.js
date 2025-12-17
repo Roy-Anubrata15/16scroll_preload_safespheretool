@@ -31,7 +31,7 @@ export function runPreloader(onComplete) {
     gsap.set(splits.logoChars.chars, { x: "100%" });
     gsap.set(".preloader-progress-bar", { scaleX: 0 });
     gsap.set(".preloader-mask", { scale: 1 });
-    // gsap.set(".hero-image", { scale: 1.08 }); // hero starts slightly zoomed-in for parallax
+    gsap.set(".hero-image", { scale: 1.08 }); // hero starts slightly zoomed-in for parallax
 
     // 3. Progress bar helper (fake progress steps)
     function animateProgress(duration = 4) {
@@ -91,15 +91,15 @@ export function runPreloader(onComplete) {
         },
         "<" // start at the same time as logo sliding out
       )
-      // .to(
-      //   ".hero-image",
-      //   {
-      //     scale: 1, // hero zooms out from 1.08 → 1
-      //     duration: 2,
-      //     ease: "power3.out",
-      //   },
-      //   "<"
-      // )
+      .to(
+        ".hero-image",
+        {
+          scale: 1, // hero zooms out from 1.08 → 1
+          duration: 2,
+          ease: "power3.out",
+        },
+        "<"
+      )
       .to(".preloader", {
         opacity: 0,
         duration: 0.6,

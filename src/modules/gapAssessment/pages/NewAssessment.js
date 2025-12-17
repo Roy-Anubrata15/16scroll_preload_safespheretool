@@ -355,7 +355,7 @@ const NewAssessment = () => {
               </span>
             </div>
 
-            <table className="min-w-full text-sm border-collapse">
+            <table className="max-w-full text-justify border-collapse">
               <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
                   <th className="border px-3 py-2">Question</th>
