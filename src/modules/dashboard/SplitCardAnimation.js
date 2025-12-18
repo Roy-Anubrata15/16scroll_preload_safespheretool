@@ -4,7 +4,7 @@ import safeSvg from './Images/file (2).svg';  // Place your SVGs here
 import esphSvg from './Images/file (1).svg';
 import ereSvg from './Images/file.svg';
 
-import TextScroll from './TextScrollAnimation.js';
+
 
 
 const SplitCardAnimation = () => {
@@ -58,7 +58,7 @@ const SplitCardAnimation = () => {
         window.ScrollTrigger.create({
           trigger: containerRef.current.querySelector(".sticky"),
           start: "top top",
-          end: `+=${window.innerHeight * 4.5}px`,
+          end: `+=${window.innerHeight * 4}px`,
           scrub: 1,
           pin: true,
           pinSpacing: true,
@@ -89,16 +89,16 @@ const SplitCardAnimation = () => {
             if (progress >= 0.35 && !isGapAnimationCompleted) {
               window.gsap.to(cardContainer, { gap: "100px", duration: 0.5, ease: "power3.out" });
               window.gsap.to(["#card-1", "#card-2", "#card-3"], {
-                borderRadius: "100px",
+                borderRadius: "50px",
                 duration: 0.5,
                 ease: "power3.out",
               });
               isGapAnimationCompleted = true;
             } else if (progress < 0.35 && isGapAnimationCompleted) {
               window.gsap.to(cardContainer, { gap: "0px", duration: 0.5, ease: "power3.out" });
-              window.gsap.to("#card-1", { borderRadius: "10px 0 0 10px", duration: 0.5, ease: "power3.out" });
+              window.gsap.to("#card-1", { borderRadius: "5px 0 0 5px", duration: 0.5, ease: "power3.out" });
               window.gsap.to("#card-2", { borderRadius: "0px", duration: 0.5, ease: "power3.out" });
-              window.gsap.to("#card-3", { borderRadius: "0 10px 10px 0", duration: 0.5, ease: "power3.out" });
+              window.gsap.to("#card-3", { borderRadius: "0 5px 5px 0", duration: 0.5, ease: "power3.out" });
               isGapAnimationCompleted = false;
             }
 

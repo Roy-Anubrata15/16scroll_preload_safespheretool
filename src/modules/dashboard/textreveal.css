@@ -93,7 +93,7 @@ align-items: center;
   font-size: 6rem;
   width: 100%;
   margin: 0 auto;
-  color: #0f0f0f;
+  color: #ffffff;
   --clip-value: 100%;
 }
 
@@ -104,7 +104,7 @@ align-items: center;
   position: absolute;
   top: 0;
   left: 0;
-  color: #fff;
+  color: #000000;
   clip-path: inset(0 0 var(--clip-value) 0);
 will-change: clip-path;
 }

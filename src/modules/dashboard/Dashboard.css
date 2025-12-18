@@ -1,4 +1,4 @@
-
+/* 
 
 @keyframes backgroundPulse {
   0%, 100% {
@@ -275,7 +275,7 @@
 }
 
 
-
+ */
 
 
 
@@ -529,3 +529,5 @@ top: 0;
 .hero-image {
   position: relative; /* Ensure proper stacking */
 }
+
+

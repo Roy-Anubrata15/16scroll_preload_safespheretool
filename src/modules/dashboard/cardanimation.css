@@ -1,11 +1,11 @@
 @import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap");
 
 :root {
-  --bg: #ffffff;
-  --fg: #1b1616;
-  --card-1: #5bd3d3;
-  --card-2: #5bd3d3;
-  --card-3: #ffffff;
+  --bg: linear-gradient(135deg, var(--fg) 0%, var(--card-1) 30%, var(--card-2) 60%, var(--card-3) 100%);;
+  --fg: #ffffff;
+  --card-1: #03cece;
+  --card-2: #14afaf;
+  --card-3: #108d8d;
 }
 
 * {
