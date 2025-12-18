@@ -156,8 +156,7 @@ const LoginPage = () => {
 
             <h1 className="auth-heading">Welcome back!</h1>
             <p className="auth-subheading">
-              Sign in with your work email to access SafeSphere risk, compliance,
-              and documentation tools.
+              Sign in with your work email to access SafeSphere.
             </p>
 
             {error && <div className="auth-error">{error}</div>}
@@ -270,7 +269,7 @@ const LoginPage = () => {
                 className="auth-link-button"
                 onClick={openSignupInfo}
               >
-                Create account
+                Click Here 
               </button>
             </div>
 

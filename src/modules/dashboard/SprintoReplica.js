@@ -486,7 +486,7 @@ const CenterMonitor = ({ active, activeIndex, allComplete }) => {
               marginBottom: 4
             }}
           >
-            Automation Engine
+            SAFESPHERE
           </div>
           <div
             style={{

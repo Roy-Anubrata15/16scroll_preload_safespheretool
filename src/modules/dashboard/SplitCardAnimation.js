@@ -157,9 +157,9 @@ if (progress >= 0.7 && !isFlipAnimationCompleted) {
   }, []);
 
   const cards = [
-    { id: 'card-1', front: safeSvg, back: 'Risk Assessment' },
-    { id: 'card-2', front: esphSvg, back: 'Documentation' },
-    { id: 'card-3', front: ereSvg, back: 'Gap Assessment' },
+    { id: 'card-1', front: safeSvg, back: 'Monthly plan' },
+    { id: 'card-2', front: esphSvg, back: 'Quarterly plan ' },
+    { id: 'card-3', front: ereSvg, back: 'Yearly Plan ' },
   ];
 
   return (
@@ -170,9 +170,9 @@ if (progress >= 0.7 && !isFlipAnimationCompleted) {
       
       
       <section className="sticky">
-        {/* <div className="sticky-header">
-          <h1>Three pillars with one purpose</h1>
-        </div> */}
+        <div className="sticky-header">
+          <h1>Choose a Plan</h1>
+        </div>
         
 <div className="card-container">
   {cards.map(({ id, front, back }, index) => (

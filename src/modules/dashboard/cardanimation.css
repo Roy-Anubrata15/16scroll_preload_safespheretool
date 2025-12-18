@@ -1,11 +1,10 @@
-@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap");
 
 :root {
   --bg: linear-gradient(135deg, var(--fg) 0%, var(--card-1) 30%, var(--card-2) 60%, var(--card-3) 100%);;
   --fg: #ffffff;
-  --card-1: #03cece;
-  --card-2: #14afaf;
-  --card-3: #108d8d;
+  --card-1: #93d696;
+  --card-2: #75c5c5;
+  --card-3: #959fdf;
 }
 
 * {
@@ -26,7 +25,7 @@ img {
 }
 
 h1 {
-  font-size: 4rem;
+  font-size: 10rem;
   font-weight: 500;
   line-height: 1;
 }
@@ -70,8 +69,9 @@ align-items: center;
 
 .sticky-header {
 position: absolute;
-top: 20%;
-left: 50%;
+top: 5%;
+left: 305;
+
 transform: translateX(-50% , -50%);
 }
 
@@ -79,8 +79,9 @@ transform: translateX(-50% , -50%);
 .sticky-header h1 {
 position: relative;
 text-align: center;
+font-size: 6rem;
 will-change: transform, opacity ;
-transform: translateY(40px);
+transform: translateY(80px);
 opacity: 0;
 }
 
@@ -143,9 +144,14 @@ border-radius: 0 20px 20px 0;
   opacity: 0.4;
 }
 
+.card-back p
+{
+  font-size: 3rem;
+}
+
 #card-1 .card-back {
   background-color: var(--card-1);
-  color: var(--bg);
+
 }
 
 #card-2 .card-back {

@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 
 import HamburgerMenu from "./components/navigations/HamburgerMenu";
+import DemoPage from "./modules/dashboard/demopage";
 
 import Dashboard from "./modules/dashboard/Dashboard";
 import LoginPage from "./modules/departments/pages/loginPage";
@@ -155,6 +156,12 @@ function App() {
               <Redirect to="/" />
             </Route>
           </Switch>
+
+          <Switch>
+
+  <Route path="/demopage" component={DemoPage} />
+
+</Switch>
         </main>
       </div>
     </Router>

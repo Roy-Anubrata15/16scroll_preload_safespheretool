@@ -6,15 +6,20 @@
   box-sizing: border-box;
 }
 
-html,
+/* html,
 body {
   width: 100%;
   height: 100%;
   font-family: "Roslindale Display Condensed", system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", sans-serif;
- background: linear-gradient(135deg, var(--fg) 0%, var(--card-1) 30%, var(--card-2) 60%, var(--card-3) 100%);
-  /* overflow-x: hidden; */
-}
+  background: linear-gradient(
+    135deg,
+    var(--fg) 0%,
+    var(--card-1) 30%,
+    var(--card-2) 60%,
+    var(--card-3) 100%
+  );
+} */
 
 a {
   text-decoration: none;
@@ -23,9 +28,9 @@ a {
 }
 
 .demo h1 {
-  width: 200;
+  width: 200vw;          /* was '200' → made valid */
   color: azure;
-  font-size: 48vw;
+  font-size: 20vw;
   font-weight: 400;
   text-align: center;
 }
@@ -33,57 +38,27 @@ a {
 /* React component wrapper */
 .container {
   width: 100%;
-  height: 1200vh; /* long scroll area */
+  height: 400vh;          /* long scroll area */
   position: relative;
-   overflow-x:hidden ;
+  overflow-x: hidden;
 }
 
 /* Horizontal strip that ScrollTrigger moves */
 .demo {
   position: absolute;
   top: 0;
-  width: 400vw; /* four screen widths */
+  width: 200vw;           /* four screen widths */
   height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   will-change: transform;
-    flex-direction: column;
-      gap: 2rem;
+  flex-direction: column;
+  gap: 2rem;
 }
 
 @media (max-width: 900px) {
   .demo {
     padding-top: 20em;
   }
-}
-
-
-
-
-
-.demo-btn {
-  padding: 0.9rem 2.6rem;
-  border-radius: 999px;
-  border: 1px solid #fff;
-  background: #a72929;
-  color: #fff;
-  font-size: 1rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background 0.3s ease, color 0.3s ease, transform 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.demo-btn:hover {
-  background: #fff;
-  color: #000;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2);
-}
-
-.demo-btn:active {
-  transform: translateY(0);
-  box-shadow: none;
 }

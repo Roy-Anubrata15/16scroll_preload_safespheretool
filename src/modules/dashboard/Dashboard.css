@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative&display=swap');
+
 /* 
 
 @keyframes backgroundPulse {
@@ -390,6 +392,7 @@
 
 
 
+
 /* === HERO PARALLAX TARGET === */
 .hero-image {
   transform-origin: center;
@@ -405,6 +408,17 @@
   z-index: 9999;
   pointer-events: none;
 }
+
+
+body
+{
+  font-family: "Cinzel Decorative", serif;
+  font: weight 900px; ;
+}
+
+
+
+
 
 /* Fill viewport */
 .preloader-progress,
