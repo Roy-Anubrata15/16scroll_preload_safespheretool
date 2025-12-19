@@ -1,0 +1,2232 @@
+// import React, { useEffect, useState, useMemo } from "react";
+// import { useHistory } from "react-router-dom";
+// import documentationService from "../services/documentationService";
+// import { Trash2, UploadCloud, Calendar, Check } from "lucide-react";
+// import { DOCUMENT_MAPPING, getExpandedDocumentRows } from "../constants";
+// import Modal from "../../../components/navigations/Modal";
+
+// import Joyride, { STATUS } from "react-joyride";
+
+// const MLD = () => {
+//   const history = useHistory();
+//   const user = JSON.parse(sessionStorage.getItem("user"));
+
+//   // Global modal state
+//   const [modal, setModal] = useState({
+//     isOpen: false,
+//     title: "",
+//     message: "",
+//     onConfirm: null,
+//     showCancel: false,
+//   });
+
+//   const [showButtons, setShowButtons] = useState(true);
+//   const [lastScrollY, setLastScrollY] = useState(0);
+
+//   // Convert DOCUMENT_MAPPING into a uniform array
+//   const mappedDocs = Object.entries(DOCUMENT_MAPPING)
+//     .flatMap(([clause, entry]) =>
+//       entry.docs.map((docName, index) => ({
+//         clause,
+//         docName,
+//         department: entry.dept[index] || entry.dept[0],
+//         type: entry.type[index] || entry.type[0],
+//         uniqueClause: `${clause}__${docName}__${index}`, // unique per row
+//       }))
+//     )
+//     .filter((item) => {
+//       if (!user || !user.department || !user.department.name) return true;
+
+//       const userDept = user.department.name.trim();
+
+//       // Allow admins to see everything
+//       if (userDept.toLowerCase() === "admin") return true;
+
+//       // Normal users: filter by exact department match
+//       return item.department === userDept;
+//     });
+
+//   // Remove duplicate document names
+//   const uniqueMappedDocs = Object.values(
+//     mappedDocs.reduce((acc, item, index) => {
+//       if (!acc[item.docName]) {
+//         acc[item.docName] = { ...item, id: `doc-${index}` }; // unique per row
+//       }
+//       return acc;
+//     }, {})
+//   );
+
+//   // Robust finder: tries several possible backend fields to discover the uploaded doc
+//   const findDoc = (item) => {
+//     if (!item) return undefined;
+
+//     // First match by docName
+//     const nameMatches = documents.find(
+//       (d) =>
+//         (d.docName && d.docName === item.docName) ||
+//         (d.name && d.name === item.docName)
+//     );
+//     if (nameMatches) return nameMatches;
+
+//     // fallback: match by clause
+//     const clauseMatches = documents.find(
+//       (d) =>
+//         String(d.clause) === String(item.uniqueClause) ||
+//         String(d.soaId) === String(item.uniqueClause) ||
+//         String(d.soa?.id) === String(item.uniqueClause) ||
+//         String(d.soaIdString) === String(item.uniqueClause)
+//     );
+//     return clauseMatches;
+//   };
+
+//   // Count uploaded documents for the current user (org + dept)
+
+//   useEffect(() => {
+//     const handleScroll = () => {
+//       if (window.scrollY > lastScrollY) {
+//         // Scrolling down
+//         setShowButtons(false);
+//       } else {
+//         // Scrolling up
+//         setShowButtons(true);
+//       }
+//       setLastScrollY(window.scrollY);
+//     };
+
+//     window.addEventListener("scroll", handleScroll);
+
+//     return () => {
+//       window.removeEventListener("scroll", handleScroll);
+//     };
+//   }, [lastScrollY]);
+
+//   const [joyrideRun, setJoyrideRun] = useState(false);
+//   const joyrideSteps = [
+//     {
+//       target: "#mld-header",
+//       content:
+//         "This is your Master List of Documents. You can upload and manage documents which are required.",
+//     },
+//     {
+//       target: "#mld-search",
+//       content: "Use this search box to filter by document reference.",
+//     },
+//     {
+//       target: "#mld-sort",
+//       content: "Sort your documents by date or name using this dropdown.",
+//     },
+//     {
+//       target: "#mld-upload-table",
+//       content:
+//         "This table shows all required uploaded documents. You can preview, upload, approve, or delete documents here.",
+//     },
+//     {
+//       target: "#mld-upload-btn",
+//       content: "Click this button to upload a document.",
+//     },
+//     {
+//       target: "#mld-approve-btn",
+//       content:
+//         "If you are a Risk Owner, you can approve documents using this button.",
+//     },
+//     {
+//       target: "#mld-delete-btn",
+//       content: "Delete a document using this button.",
+//     },
+//   ];
+
+//   // original states
+//   const [documents, setDocuments] = useState([]);
+//   const [soas, setSoas] = useState([]);
+//   const [selectedFiles, setSelectedFiles] = useState({});
+//   const [hasUploaded, setHasUploaded] = useState({});
+//   const [uploading, setUploading] = useState({});
+
+//   const [currentPageSoA, setCurrentPageSoA] = useState(1);
+//   const [currentPageDocs, setCurrentPageDocs] = useState(1);
+//   const [previewDoc, setPreviewDoc] = useState(null);
+//   const [previewContent, setPreviewContent] = useState("");
+//   const itemsPerPage = 3;
+
+//   // additional states
+//   const [uploadedCounts, setUploadedCounts] = useState({});
+//   const [soaSearch, setSoaSearch] = useState("");
+//   const [soaSort, setSoaSort] = useState("date_newest"); // date_newest | date_oldest | name
+//   const [docSearch, setDocSearch] = useState("");
+//   const [docSort, setDocSort] = useState("date_newest");
+//   const [previewModalOpen, setPreviewModalOpen] = useState(false);
+//   const [previewUrl, setPreviewUrl] = useState("");
+
+//   useEffect(() => {
+//     const fetchData = async () => {
+//       try {
+//         const user = JSON.parse(sessionStorage.getItem("user"));
+
+//         // Fetch all documents and filter by organization
+//         const docs = (await documentationService.getDocuments()) || [];
+//         const orgDocs = docs.filter(
+//           (d) => d.organization === user?.organization
+//         );
+//         setDocuments(orgDocs);
+//         console.log("📄 Documents fetched from API (org filtered):", orgDocs);
+
+//         // Fetch all SoA entries and filter by organization
+//         const soaList = (await documentationService.getSoAEntries()) || [];
+//         const orgSoas = (Array.isArray(soaList) ? soaList : []).filter(
+//           (s) => s.organization === user?.organization
+//         );
+//         setSoas(orgSoas);
+//         console.log("📘 SoA entries fetched (org filtered):", orgSoas);
+
+//         // Compute counts per SoA
+//         const counts = {};
+//         orgSoas.forEach((s) => {
+//           counts[s.id] = 0;
+//         });
+//         orgDocs.forEach((d) => {
+//           const sid = d.soaId ?? d.soa?.id ?? d.soaIdString ?? null;
+//           if (sid != null) counts[sid] = (counts[sid] ?? 0) + 1;
+//         });
+//         setUploadedCounts(counts);
+//       } catch (error) {
+//         console.error("Error loading data:", error);
+//         setDocuments([]);
+//         setSoas([]);
+//         setUploadedCounts({});
+//       }
+//     };
+
+//     fetchData();
+//   }, []);
+
+//   const handlePreviewClick = (item) => {
+//     // item can be an object { clause, docName, ... } OR a string clause/docName
+//     const searchItem =
+//       typeof item === "string" ? { docName: item, clause: item } : item;
+
+//     const doc = findDoc(searchItem);
+//     if (doc && doc.url) {
+//       const baseUrl = "https://safesphere.duckdns.org/doc-service";
+//       const filePath = doc.url.startsWith("/") ? doc.url : `/${doc.url}`;
+//       const encodedPath = encodeURI(filePath);
+//       const fullUrl = baseUrl + encodedPath;
+//       setPreviewUrl(fullUrl);
+//       setPreviewModalOpen(true);
+//     } else {
+//       setModal({
+//         isOpen: true,
+//         title: "No Document Found",
+//         message: "No Document to preview",
+//         showCancel: false,
+//         onConfirm: () => setModal((m) => ({ ...m, isOpen: false })),
+//       });
+//     }
+//   };
+
+//   const getDocsForUser = (soas, user, documents) => {
+//     const docsSet = new Set();
+//     let docCount = 0;
+//     documents.forEach((doc) => {
+//       uniqueMappedDocs.forEach((soa) => {
+//         if (
+//           doc.uniqueClause === soa.uniqueClause &&
+//           user.department.name === doc.departmentName &&
+//           user.organization === doc.organization
+//         )
+//           docCount++;
+//       });
+//     });
+//     soas.forEach((soa) => {
+//       const refs = Array.isArray(soa.documentRef)
+//         ? soa.documentRef
+//         : [soa.documentRef];
+
+//       refs.forEach((ref) => {
+//         for (const key in DOCUMENT_MAPPING) {
+//           if (
+//             DOCUMENT_MAPPING[key].docs?.includes(ref) &&
+//             DOCUMENT_MAPPING[key].dept.some((d) =>
+//               user.department?.name.includes(d)
+//             )
+//           ) {
+//             docsSet.add(ref);
+//           }
+//         }
+//       });
+//     });
+
+//     return { docCount, userDocs: Array.from(docsSet) };
+//   };
+//   const closePreviewModal = () => {
+//     setPreviewModalOpen(false);
+//     setPreviewUrl("");
+//   };
+
+//   const handleFileChange = (soaId, fileOrFiles) => {
+//     if (!fileOrFiles) {
+//       setSelectedFiles((prev) => ({ ...prev, [soaId]: null }));
+//       return;
+//     }
+//     let file = fileOrFiles;
+//     if (file instanceof FileList || Array.isArray(file)) file = file[0];
+//     setSelectedFiles((prev) => ({ ...prev, [soaId]: file }));
+//   };
+
+//   const handleFileSelect = (event, refId) => {
+//     const file = event.target.files[0];
+//     if (file) {
+//       setSelectedFiles((prev) => ({
+//         ...prev,
+//         [refId]: file,
+//       }));
+//       setHasUploaded((prev) => ({
+//         ...prev,
+//         [refId]: false,
+//       }));
+//     }
+//   };
+
+//   const userMappedDocs = documents.filter(
+//     (item) =>
+//       item.departmentName === user?.department?.name &&
+//       item.organization === user.organization
+//   );
+
+//   const totalDocsToUpload = userMappedDocs.length;
+
+//   const handleSingleButtonUpload = async (id) => {
+//     const item = uniqueMappedDocs.find((d) => d.id === id);
+//     if (!item) return;
+
+//     const { clause, uniqueClause, docName } = item;
+
+//     const input = document.createElement("input");
+//     input.type = "file";
+//     input.accept = "*/*";
+//     input.onchange = async (e) => {
+//       const file = e.target.files && e.target.files[0];
+//       if (!file) return;
+
+//       try {
+//         // Use unique row id instead of clause
+//         setUploading((prev) => ({ ...prev, [id]: true }));
+
+//         const uploadedDoc = await documentationService.uploadDocument({
+//           file,
+//           soaId: uniqueClause,
+//           docName,
+//           controlId: uniqueClause,
+//           uploaderName: user?.name ?? "Unknown",
+//           departmentName: user?.department?.name ?? "N/A",
+//           organization: user?.organization,
+//         });
+
+//         const docs = (await documentationService.getDocuments()) || [];
+//         const orgDocs = docs.filter(
+//           (d) => d.organization === user?.organization
+//         );
+//         setDocuments(orgDocs);
+
+//         // recompute uploaded counts
+//         const counts = {};
+//         Object.keys(DOCUMENT_MAPPING).forEach((k) => (counts[k] = 0));
+//         (orgDocs || []).forEach((d) => {
+//           const sid = d.clause ?? d.soaId ?? d.soa?.id ?? d.soaIdString ?? null;
+//           if (sid != null) counts[String(sid)] = (counts[String(sid)] ?? 0) + 1;
+//         });
+//         setUploadedCounts(counts);
+
+//         setModal({
+//           isOpen: true,
+//           title: "Success",
+//           message: "Document uploaded successfully!",
+//           showCancel: false,
+//           onConfirm: () => setModal((m) => ({ ...m, isOpen: false })),
+//         });
+//       } catch (err) {
+//         console.error("Upload failed:", err);
+//         setModal({
+//           isOpen: true,
+//           title: "Failure",
+//           message: "Upload failed — please try again later.",
+//           showCancel: false,
+//           onConfirm: () => setModal((m) => ({ ...m, isOpen: false })),
+//         });
+//       } finally {
+//         // stop uploading by id
+//         setUploading((prev) => ({ ...prev, [id]: false }));
+//       }
+//     };
+//     input.click();
+//   };
+
+//   const handleDeleteForSoA = async (docId) => {
+//     const orgId = user?.organization || user?.organizationId;
+
+//     const doc = documents.find((d) => d.id === docId);
+
+//     if (!doc) {
+//       console.error("Document not found:", docId);
+//       return;
+//     }
+
+//     if (doc.organization !== orgId) {
+//       console.error("Cannot delete: belongs to another organization.");
+//       return;
+//     }
+
+//     setModal({
+//       isOpen: true,
+//       title: "Confirm Delete",
+//       message: "Are you sure you want to delete this document?",
+//       showCancel: true,
+//       onConfirm: async () => {
+//         setModal((m) => ({ ...m, isOpen: false }));
+
+//         try {
+//           await documentationService.deleteDocument(docId);
+
+//           // remove doc from local state
+//           const updatedDocs = documents.filter((d) => d.id !== docId);
+//           setDocuments(updatedDocs);
+
+//           // update counts
+//           const counts = {};
+//           Object.keys(DOCUMENT_MAPPING).forEach((k) => (counts[k] = 0));
+
+//           updatedDocs.forEach((d) => {
+//             const clause = d.soaId?.split("__")[0];
+//             if (clause) counts[clause] = (counts[clause] || 0) + 1;
+//           });
+
+//           setUploadedCounts(counts);
+
+//           setModal({
+//             isOpen: true,
+//             title: "Success",
+//             message: "Document Deleted",
+//             showCancel: false,
+//             onConfirm: () => setModal((m) => ({ ...m, isOpen: false })),
+//           });
+//         } catch (error) {
+//           console.error("Delete failed:", error);
+//           setModal({
+//             isOpen: true,
+//             title: "Failure",
+//             message: "Delete failed — please try again.",
+//             showCancel: false,
+//             onConfirm: () => setModal((m) => ({ ...m, isOpen: false })),
+//           });
+//         }
+//       },
+//     });
+//   };
+
+//   const getUploadedCount = (soaId) => uploadedCounts[soaId] ?? 0;
+
+//   // ---------------- SEARCH & SORT ----------------
+//   const filteredAndSortedSoas = useMemo(() => {
+//     let list = Array.isArray(soas) ? [...soas] : [];
+//     if (soaSearch && soaSearch.trim() !== "") {
+//       const q = soaSearch.trim().toLowerCase();
+//       list = list.filter((s) => {
+//         const ref = Array.isArray(s.documentRef)
+//           ? s.documentRef.join(" ")
+//           : s.documentRef ?? "";
+//         return ref.toString().toLowerCase().includes(q);
+//       });
+//     }
+//     if (soaSort === "date_newest" || soaSort === "date_oldest") {
+//       list.sort((a, b) => {
+//         const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+//         const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+//         return soaSort === "date_newest" ? bd - ad : ad - bd;
+//       });
+//     } else if (soaSort === "name") {
+//       list.sort((a, b) => {
+//         const an = (
+//           Array.isArray(a.documentRef)
+//             ? a.documentRef.join(", ")
+//             : a.documentRef ?? ""
+//         ).toLowerCase();
+//         const bn = (
+//           Array.isArray(b.documentRef)
+//             ? b.documentRef.join(", ")
+//             : b.documentRef ?? ""
+//         ).toLowerCase();
+//         return an.localeCompare(bn);
+//       });
+//     }
+//     return list;
+//   }, [soas, soaSearch, soaSort]);
+
+//   // --- DEDUPLICATE SOAs ---
+//   const uniqueSoas = useMemo(() => {
+//     const seen = new Set();
+//     return filteredAndSortedSoas.filter((soa) => {
+//       if (seen.has(soa.id)) return false;
+//       seen.add(soa.id);
+//       return true;
+//     });
+//   }, [filteredAndSortedSoas]);
+
+//   const departmentFilteredSoAs = useMemo(() => {
+//     if (!user?.department?.name) return uniqueSoas;
+
+//     return uniqueSoas.filter((soa) => {
+//       const docRefs = Array.isArray(soa.documentRef)
+//         ? soa.documentRef
+//         : [soa.documentRef];
+
+//       // Check if any docRef exists in DOCUMENT_MAPPING
+//       return docRefs.some((ref) => {
+//         for (const key in DOCUMENT_MAPPING) {
+//           if (DOCUMENT_MAPPING[key].docs?.includes(ref)) {
+//             const deptList = Array.isArray(DOCUMENT_MAPPING[key].dept)
+//               ? DOCUMENT_MAPPING[key].dept
+//               : [DOCUMENT_MAPPING[key].dept];
+//             if (deptList.includes(user.department.name)) return true;
+//           }
+//         }
+//         return false;
+//       });
+//     });
+//   }, [uniqueSoas, user]);
+
+//   // Pagination
+//   const currentSoAs = departmentFilteredSoAs;
+
+//   const totalPagesSoA = Math.max(
+//     1,
+//     Math.ceil(currentSoAs.length / itemsPerPage)
+//   );
+
+//   // ==================== STYLES ====================
+//   const backBtnStyle = {
+//     position: "fixed",
+//     top: "40px",
+//     right: "120px",
+//     padding: "10px 20px",
+//     borderRadius: "6px",
+//     backgroundColor: "#005FCC",
+//     border: "none",
+//     color: "white",
+//     fontSize: "1rem",
+//     fontWeight: "600",
+//     cursor: "pointer",
+//     boxShadow: "0 4px 8px rgba(0,95,204,0.3)",
+//     transition: "all 0.3s ease",
+//     display: "inline-flex",
+//     alignItems: "center",
+//     zIndex: 99,
+//   };
+
+//   // =============================
+//   // Shared Cell Style
+//   // =============================
+//   const cellCenter = {
+//     padding: "12px 14px",
+//     color: "#2c3e50",
+//     verticalAlign: "middle",
+//     textAlign: "center",
+//   };
+
+//   // =============================
+//   // Index Column
+//   // =============================
+//   const cellIndexStyle = {
+//     ...cellCenter,
+//     color: "#495057",
+//     fontWeight: "600",
+//   };
+
+//   // =============================
+//   // Document Name (clickable)
+//   // =============================
+//   const cellDocStyle = {
+//     padding: "12px 14px",
+//     color: "#3498db",
+//     verticalAlign: "middle",
+//     cursor: "pointer",
+//     textDecoration: "underline",
+//   };
+
+//   // =============================
+//   // Upload Button Style
+//   // =============================
+//   const uploadBtnStyle = {
+//     border: "1px solid #ccc",
+//     borderRadius: "6px",
+//     padding: "4px 8px",
+//     cursor: "pointer",
+//     display: "flex",
+//     alignItems: "center",
+//     justifyContent: "center",
+//   };
+
+//   // =============================
+//   // Actions Cell
+//   // =============================
+//   const actionCellStyle = {
+//     padding: "12px 14px",
+//     verticalAlign: "middle",
+//     textAlign: "center",
+//     display: "flex",
+//     gap: "4px",
+//     justifyContent: "center",
+//     // 👇 Change 'align-items' to 'flex-start' or 'baseline' and add padding-top if needed
+//     alignItems: "flex-start", // Aligns items to the top of the flex container
+//     paddingTop: "22px", // Increase top padding to push content down
+//   };
+
+//   // =============================
+//   // Approved Label
+//   // =============================
+//   const approvedLabelStyle = {
+//     backgroundColor: "#2ecc71",
+//     color: "white",
+//     padding: "2px 6px",
+//     borderRadius: "4px",
+//   };
+
+//   // =============================
+//   // Approve Button
+//   // =============================
+//   const approveBtnStyle = {
+//     backgroundColor: "#2ecc71",
+//     color: "white",
+//     border: "none",
+//     borderRadius: "6px",
+//     padding: "4px 6px",
+//     cursor: "pointer",
+//     display: "flex",
+//     alignItems: "center",
+//     justifyContent: "center",
+//   };
+
+//   // =============================
+//   // Delete Button
+//   // =============================
+//   const deleteBtnStyle = {
+//     backgroundColor: "#e74c3c",
+//     color: "white",
+//     border: "none",
+//     borderRadius: "6px",
+//     padding: "4px 6px",
+//     cursor: "pointer",
+//     display: "flex",
+//     alignItems: "center",
+//     justifyContent: "center",
+//   };
+
+//   const tableContainerStyle = { width: "100%", overflowX: "auto" };
+
+//   const { docCount, userDocs } = getDocsForUser(
+//     filteredAndSortedSoas,
+//     user,
+//     documents
+//   );
+
+//   // ==================== RENDER ====================
+//   return (
+//     <div
+//       style={{ padding: "10px", maxWidth: "1200px", margin: "5px auto 20px" }}
+//     >
+//       {/* Joyride */}
+//       <Joyride
+//         steps={joyrideSteps}
+//         run={joyrideRun}
+//         continuous
+//         scrollToFirstStep
+//         showSkipButton
+//         styles={{ options: { zIndex: 10000 } }}
+//         callback={(data) => {
+//           const { status } = data;
+//           if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
+//             setJoyrideRun(false);
+//           }
+//         }}
+//       />
+
+//       {/* Start Tour Button */}
+//       <button
+//         style={{
+//           position: "sticky",
+//           top: "0",
+//           margin: "10px",
+//           padding: "10px 24px",
+//           borderRadius: "8px",
+//           background: "linear-gradient(90deg, #ffb74d 0%, #ff9800 100%)",
+//           border: "none",
+//           color: "#fff",
+//           fontWeight: "600",
+//           fontSize: "14px",
+//           cursor: "pointer",
+//           boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+//           transition: "transform 0.3s ease, opacity 0.3s ease",
+//           zIndex: 999,
+//           transform: showButtons ? "translateY(0)" : "translateY(-100%)",
+//           opacity: showButtons ? 1 : 0,
+//         }}
+//         onClick={() => setJoyrideRun(true)}
+//       >
+//         Tutorial{" "}
+//       </button>
+
+//       {/* Back to Dashboard Button */}
+//       <button
+//         style={{
+//           position: "sticky",
+//           top: "0",
+//           margin: "10px",
+//           padding: "10px 24px",
+//           borderRadius: "8px",
+//           background: "#005FCC",
+//           border: "none",
+//           color: "#fff",
+//           fontWeight: "500",
+//           fontSize: "14px",
+//           cursor: "pointer",
+//           boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+//           transition: "transform 0.3s ease, opacity 0.3s ease",
+//           zIndex: 999,
+//           transform: showButtons ? "translateY(0)" : "translateY(-100%)",
+//           opacity: showButtons ? 1 : 0,
+//         }}
+//         onClick={() => history.push("/documentation")}
+//       >
+//         ← Back to Dashboard{" "}
+//       </button>
+
+//       <div
+//         id="mld-header"
+//         style={{
+//           background: "linear-gradient(135deg,#667eea 0%,#764ba2 100%)",
+//           borderRadius: "12px",
+//           padding: "20px",
+//           marginBottom: "20px",
+//           boxShadow: "0 5px 20px rgba(102,126,234,0.25)",
+//           border: "1px solid rgba(255,255,255,0.1)",
+//           color: "white",
+//         }}
+//       >
+//         <h1
+//           style={{ marginBottom: "8px", fontSize: "28px", fontWeight: "700" }}
+//         >
+//           Master List of Documents
+//         </h1>
+//         <p style={{ fontSize: "16px", opacity: 0.95, marginBottom: "12px" }}>
+//           Upload and manage your documents
+//         </p>
+//         <div
+//           style={{
+//             display: "flex",
+//             gap: "30px",
+//             fontSize: "14px",
+//             opacity: 0.95,
+//             flexWrap: "wrap",
+//           }}
+//         >
+//           <div>
+//             <span style={{ fontWeight: 600 }}>Total Documents to Upload:</span>{" "}
+//             {uniqueMappedDocs.length}
+//           </div>
+//           <div>
+//             <span style={{ fontWeight: 600 }}>Documents Uploaded:</span>{" "}
+//             {totalDocsToUpload}
+//           </div>
+//         </div>
+//       </div>
+
+//       <div
+//         className="controls-row"
+//         style={{
+//           display: "flex",
+//           gap: "12px",
+//           alignItems: "center",
+//           marginBottom: "12px",
+//           justifyContent: "space-between",
+//         }}
+//       >
+//         <div
+//           className="controls-left"
+//           style={{ display: "flex", gap: "12px", alignItems: "center" }}
+//         >
+//           <input
+//             type="text"
+//             placeholder="Search Document Ref..."
+//             value={soaSearch}
+//             onChange={(e) => {
+//               setSoaSearch(e.target.value);
+//               setCurrentPageSoA(1);
+//             }}
+//             id="mld-search"
+//             style={{
+//               padding: "8px 12px",
+//               borderRadius: "8px",
+//               border: "1px solid #ccc",
+//               minWidth: "220px",
+//             }}
+//           />
+//           <select
+//             value={soaSort}
+//             onChange={(e) => setSoaSort(e.target.value)}
+//             id="mld-sort"
+//             style={{
+//               padding: "8px 12px",
+//               borderRadius: "8px",
+//               border: "1px solid #ccc",
+//               background: "white",
+//             }}
+//           >
+//             <option value="date_newest">Date (Newest)</option>
+//             <option value="date_oldest">Date (Oldest)</option>
+//             <option value="name">Name (A → Z)</option>
+//           </select>
+//         </div>
+//         <div
+//           className="controls-right"
+//           style={{ color: "#666", fontSize: "14px" }}
+//         >
+//           Showing {uniqueMappedDocs.length} upload entries
+//         </div>
+//       </div>
+
+//       <div
+//         style={{
+//           background: "white",
+//           borderRadius: "12px",
+//           padding: "20px",
+//           marginBottom: "28px",
+//           boxShadow: "0 3px 15px rgba(0,0,0,0.06)",
+//           border: "1px solid #e9ecef",
+//         }}
+//       >
+//         <h2
+//           style={{
+//             color: "#2c3e50",
+//             marginBottom: "16px",
+//             fontSize: "18px",
+//             borderBottom: "3px solid #667eea",
+//             paddingBottom: "8px",
+//           }}
+//         >
+//           Upload Documents
+//         </h2>
+
+//         <div style={tableContainerStyle}>
+//           <table
+//             id="mld-upload-table"
+//             style={{ width: "100%", borderCollapse: "collapse", minWidth: 840 }}
+//           >
+//             <thead>
+//               <tr style={{ backgroundColor: "#f8f9fa" }}>
+//                 <th
+//                   style={{
+//                     padding: "12px 14px",
+//                     textAlign: "center",
+//                     borderBottom: "2px solid #e6e6e6",
+//                     fontWeight: 600,
+//                     width: "4%",
+//                   }}
+//                 >
+//                   #
+//                 </th>
+//                 <th
+//                   style={{
+//                     padding: "12px 14px",
+//                     textAlign: "center",
+//                     borderBottom: "2px solid #e6e6e6",
+//                     fontWeight: 600,
+//                     width: "25%",
+//                   }}
+//                 >
+//                   Document Name
+//                 </th>
+//                 <th
+//                   style={{
+//                     padding: "12px 14px",
+//                     textAlign: "center",
+//                     borderBottom: "2px solid #e6e6e6",
+//                     fontWeight: 600,
+//                     width: "15%",
+//                   }}
+//                 >
+//                   Doc Owner
+//                 </th>
+//                 <th
+//                   style={{
+//                     padding: "12px 14px",
+//                     textAlign: "center",
+//                     borderBottom: "2px solid #e6e6e6",
+//                     fontWeight: 600,
+//                     width: "15%",
+//                   }}
+//                 >
+//                   Uploader Name
+//                 </th>
+//                 <th
+//                   style={{
+//                     padding: "12px 14px",
+//                     textAlign: "center",
+//                     borderBottom: "2px solid #e6e6e6",
+//                     fontWeight: 600,
+//                     width: "12%",
+//                   }}
+//                 >
+//                   Approval Date
+//                 </th>
+//                 <th
+//                   style={{
+//                     padding: "12px 14px",
+//                     textAlign: "center",
+//                     borderBottom: "2px solid #e6e6e6",
+//                     fontWeight: 600,
+//                     width: "12%",
+//                   }}
+//                 >
+//                   Next Approval Date
+//                 </th>
+//                 <th
+//                   style={{
+//                     padding: "12px 14px",
+//                     textAlign: "center",
+//                     borderBottom: "2px solid #e6e6e6",
+//                     fontWeight: 600,
+//                     width: "10%",
+//                   }}
+//                 >
+//                   Upload File
+//                 </th>
+//                 <th
+//                   style={{
+//                     padding: "12px 14px",
+//                     textAlign: "center",
+//                     borderBottom: "2px solid #e6e6e6",
+//                     fontWeight: 600,
+//                     width: "7%",
+//                   }}
+//                 >
+//                   Actions
+//                 </th>
+//               </tr>
+//             </thead>
+//             <tbody>
+//               {mappedDocs.length === 0 ? (
+//                 <tr>
+//                   <td
+//                     colSpan="8"
+//                     style={{
+//                       textAlign: "center",
+//                       padding: "18px",
+//                       color: "#7f8c8d",
+//                     }}
+//                   >
+//                     No SoA entries found
+//                   </td>
+//                 </tr>
+//               ) : (
+//                 uniqueMappedDocs.map((item, idx) => {
+//                   const doc = findDoc(item);
+//                   const hasUploaded = !!doc;
+
+//                   const approvalDate = doc?.approvalDate
+//                     ? new Date(doc.approvalDate).toISOString().split("T")[0]
+//                     : "—";
+
+//                   const nextApprovalDate = doc?.nextApprovalDate
+//                     ? new Date(doc.nextApprovalDate).toISOString().split("T")[0]
+//                     : "—";
+
+//                   const handleApprove = async () => {
+//                     if (!doc) return;
+
+//                     const today = new Date();
+//                     const nextDate = new Date();
+//                     nextDate.setDate(today.getDate() + 365);
+
+//                     try {
+//                       const updatedDoc =
+//                         await documentationService.updateApprovalDate(
+//                           doc.id,
+//                           today.getTime(),
+//                           nextDate.getTime()
+//                         );
+
+//                       setDocuments((prevDocs) =>
+//                         prevDocs.map((d) => (d.id === doc.id ? updatedDoc : d))
+//                       );
+
+//                       setModal({
+//                         isOpen: true,
+//                         title: "Success",
+//                         message: "Document Approved",
+//                         showCancel: false,
+//                         onConfirm: () =>
+//                           setModal((m) => ({ ...m, isOpen: false })),
+//                       });
+//                     } catch (err) {
+//                       console.error(err);
+//                       setModal({
+//                         isOpen: true,
+//                         title: "Failed",
+//                         message: "Approval Failed",
+//                         showCancel: false,
+//                         onConfirm: () =>
+//                           setModal((m) => ({ ...m, isOpen: false })),
+//                       });
+//                     }
+//                   };
+
+//                   return (
+//                     <tr
+//                       key={item.id}
+//                       style={{ borderBottom: "1px solid #f1f1f1" }}
+//                     >
+//                       {/* Index */}
+//                       <td style={cellIndexStyle}>{idx + 1}</td>
+
+//                       {/* Document Name from MLD mapping */}
+//                       <td
+//                         style={cellDocStyle}
+//                         onClick={() => handlePreviewClick(item)}
+//                       >
+//                         {item.docName}
+//                       </td>
+
+//                       {/* Department */}
+//                       <td style={cellCenter}>{item.department || "—"}</td>
+
+//                       {/* Uploader */}
+//                       <td style={cellCenter}>{doc?.uploaderName ?? "—"}</td>
+
+//                       {/* Approval Date */}
+//                       <td style={cellCenter}>{approvalDate}</td>
+
+//                       {/* Next Approval Date */}
+//                       <td style={cellCenter}>{nextApprovalDate}</td>
+
+//                       {/* Upload Button */}
+//                       <td style={cellCenter}>
+//                         <button
+//                           onClick={() => handleSingleButtonUpload(item.id)}
+//                           id="mld-upload-btn"
+//                           style={{
+//                             ...uploadBtnStyle,
+//                             backgroundColor: hasUploaded
+//                               ? "#2ecc71"
+//                               : "#f1f1f1",
+//                             color: hasUploaded ? "white" : "inherit",
+//                           }}
+//                           disabled={hasUploaded || uploading[item.id]}
+//                         >
+//                           {uploading[item.id] ? (
+//                             <>
+//                               <UploadCloud
+//                                 size={16}
+//                                 style={{ marginRight: 4 }}
+//                               />
+//                               Uploading…
+//                             </>
+//                           ) : hasUploaded ? (
+//                             <Check
+//                               size={20}
+//                               style={{
+//                                 marginRight: "25px",
+//                                 marginLeft: "25px",
+//                               }}
+//                             />
+//                           ) : (
+//                             <>
+//                               <UploadCloud
+//                                 size={16}
+//                                 style={{ marginRight: 4 }}
+//                               />
+//                               Upload
+//                             </>
+//                           )}
+//                         </button>
+//                       </td>
+
+//                       {/* Actions */}
+//                       <td style={actionCellStyle}>
+//                         {hasUploaded && (
+//                           <>
+//                             {doc?.approvalDate ? (
+//                               <div style={approvedLabelStyle}>Approved</div>
+//                             ) : (
+//                               user?.role === "risk_owner" && (
+//                                 <button
+//                                   id="mld-approve-btn"
+//                                   onClick={handleApprove}
+//                                   style={approveBtnStyle}
+//                                 >
+//                                   <Calendar
+//                                     size={16}
+//                                     style={{ marginRight: 4 }}
+//                                   />
+//                                   Approve
+//                                 </button>
+//                               )
+//                             )}
+
+//                             <button
+//                               id="mld-delete-btn"
+//                               onClick={() => handleDeleteForSoA(doc.id)}
+//                               style={deleteBtnStyle}
+//                             >
+//                               <Trash2 size={22} />
+//                             </button>
+//                           </>
+//                         )}
+//                       </td>
+//                     </tr>
+//                   );
+//                 })
+//               )}
+//             </tbody>
+//           </table>
+//         </div>
+//       </div>
+
+//       {/* Preview modal */}
+//       {previewModalOpen && (
+//         <div
+//           style={{
+//             position: "fixed",
+//             top: 0,
+//             left: 0,
+//             right: 0,
+//             bottom: 0,
+//             backgroundColor: "rgba(0,0,0,0.6)",
+//             display: "flex",
+//             justifyContent: "center",
+//             alignItems: "center",
+//             zIndex: 999,
+//           }}
+//         >
+//           <div
+//             style={{
+//               background: "white",
+//               borderRadius: "12px",
+//               width: "95vw",
+//               height: "95vh",
+//               overflow: "hidden",
+//               position: "relative",
+//             }}
+//           >
+//             <button
+//               onClick={closePreviewModal}
+//               style={{
+//                 position: "absolute",
+//                 top: "12px",
+//                 right: "12px",
+//                 background: "#e74c3c",
+//                 color: "white",
+//                 border: "none",
+//                 borderRadius: "50%",
+//                 width: "30px",
+//                 height: "30px",
+//                 fontWeight: 600,
+//                 cursor: "pointer",
+//                 zIndex: 1,
+//               }}
+//             >
+//               ×
+//             </button>
+
+//             <iframe
+//               src={previewUrl}
+//               title="Preview Document"
+//               style={{
+//                 width: "100%",
+//                 height: "100%",
+//                 border: "none",
+//               }}
+//             />
+//           </div>
+//         </div>
+//       )}
+//       <Modal
+//         isOpen={modal.isOpen}
+//         title={modal.title}
+//         message={modal.message}
+//         onClose={() => setModal((m) => ({ ...m, isOpen: false }))}
+//         onConfirm={modal.onConfirm}
+//         showCancel={modal.showCancel}
+//       />
+//     </div>
+//   );
+// };
+
+// export default MLD;
+
+
+
+
+import React, { useEffect, useState, useMemo } from "react";
+import { useHistory } from "react-router-dom";
+import documentationService from "../services/documentationService";
+import { Trash2, UploadCloud, Calendar, Check } from "lucide-react";
+import { DOCUMENT_MAPPING } from "../constants";
+import Modal from "../../../components/navigations/Modal";
+import Joyride, { STATUS } from "react-joyride";
+
+const mldStyles = `
+  .mld-page {
+    padding: 10px;
+    max-width: 1200px;
+    margin: 5px auto 20px;
+    box-sizing: border-box;
+  }
+
+  .mld-top-buttons {
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    display: flex;
+    gap: 8px;
+    padding: 6px 2px 0 2px;
+    background: transparent;
+  }
+
+  .mld-btn {
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    white-space: nowrap;
+  }
+
+  .mld-btn--tutorial {
+    background: linear-gradient(90deg, #ffb74d 0%, #ff9800 100%);
+    color: #fff;
+  }
+
+  .mld-btn--back {
+    background: #005FCC;
+    color: #fff;
+    font-weight: 500;
+  }
+
+  .mld-header {
+    background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 10px 0 20px 0;
+    box-shadow: 0 5px 20px rgba(102,126,234,0.25);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  .mld-header-title {
+    margin-bottom: 8px;
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  .mld-header-sub {
+    font-size: 15px;
+    opacity: 0.95;
+    margin-bottom: 12px;
+  }
+
+  .mld-header-stats {
+    display: flex;
+    gap: 20px;
+    font-size: 14px;
+    opacity: 0.95;
+    flex-wrap: wrap;
+  }
+
+  .mld-controls-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .mld-controls-left {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .mld-search {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    min-width: 220px;
+  }
+
+  .mld-select {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    background: #fff;
+  }
+
+  .mld-controls-right {
+    color: #666;
+    font-size: 14px;
+  }
+
+  .mld-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 28px;
+    box-shadow: 0 3px 15px rgba(0,0,0,0.06);
+    border: 1px solid #e9ecef;
+  }
+
+  .mld-card-title {
+    color: #2c3e50;
+    margin-bottom: 16px;
+    font-size: 18px;
+    border-bottom: 3px solid #667eea;
+    padding-bottom: 8px;
+  }
+
+  .mld-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .mld-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 840px;
+  }
+
+  .mld-th {
+    padding: 12px 14px;
+    text-align: center;
+    border-bottom: 2px solid #e6e6e6;
+    font-weight: 600;
+    background-color: #f8f9fa;
+    white-space: nowrap;
+  }
+
+  .mld-cell-center {
+    padding: 12px 14px;
+    color: #2c3e50;
+    vertical-align: middle;
+    text-align: center;
+  }
+
+  .mld-cell-index {
+    padding: 12px 14px;
+    color: #495057;
+    vertical-align: middle;
+    text-align: center;
+    font-weight: 600;
+  }
+
+  .mld-cell-doc {
+    padding: 12px 14px;
+    color: #3498db;
+    vertical-align: middle;
+    cursor: pointer;
+    text-decoration: underline;
+    text-align: left;
+  }
+
+  .mld-upload-btn {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mld-actions-cell {
+    padding: 12px 14px;
+    vertical-align: middle;
+    text-align: center;
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 22px;
+  }
+
+  .mld-approved-label {
+    background-color: #2ecc71;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  .mld-approve-btn {
+    background-color: #2ecc71;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mld-delete-btn {
+    background-color: #e74c3c;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mld-preview-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0,0,0,0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+  }
+
+  .mld-preview-dialog {
+    background: #fff;
+    border-radius: 12px;
+    width: 95vw;
+    height: 95vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .mld-preview-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #e74c3c;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 1;
+  }
+
+  /* SMALL PHONES */
+  @media (max-width: 480px) {
+    .mld-page {
+      padding: 8px 6px 16px 6px;
+    }
+
+    .mld-top-buttons {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+    }
+
+    .mld-btn {
+      width: 100%;
+      font-size: 13px;
+      padding: 8px 14px;
+    }
+
+    .mld-header {
+      padding: 16px 12px;
+    }
+
+    .mld-header-title {
+      font-size: 20px;
+    }
+
+    .mld-header-sub {
+      font-size: 13px;
+    }
+
+    .mld-controls-row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .mld-controls-left {
+      width: 100%;
+    }
+
+    .mld-search, .mld-select {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .mld-controls-right {
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .mld-card {
+      padding: 16px 10px;
+    }
+  }
+
+  /* TABLET */
+  @media (min-width: 481px) and (max-width: 768px) {
+    .mld-page {
+      padding: 10px 10px 20px 10px;
+    }
+
+    .mld-top-buttons {
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+  }
+
+  /* LARGE DESKTOP */
+  @media (min-width: 1200px) {
+    .mld-page {
+      max-width: 1280px;
+    }
+  }
+`;
+
+const MLD = () => {
+  const history = useHistory();
+  const user = JSON.parse(sessionStorage.getItem("user"));
+
+  const [modal, setModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+    showCancel: false,
+  });
+
+  const [showButtons, setShowButtons] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > lastScrollY) setShowButtons(false);
+      else setShowButtons(true);
+      setLastScrollY(window.scrollY);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+
+  const joyrideSteps = [
+    {
+      target: "#mld-header",
+      content:
+        "This is your Master List of Documents. You can upload and manage documents which are required.",
+    },
+    {
+      target: "#mld-search",
+      content: "Use this search box to filter by document reference.",
+    },
+    {
+      target: "#mld-sort",
+      content: "Sort your documents by date or name using this dropdown.",
+    },
+    {
+      target: "#mld-upload-table",
+      content:
+        "This table shows all required uploaded documents. You can preview, upload, approve, or delete documents here.",
+    },
+    {
+      target: "#mld-upload-btn",
+      content: "Click this button to upload a document.",
+    },
+    {
+      target: "#mld-approve-btn",
+      content:
+        "If you are a Risk Owner, you can approve documents using this button.",
+    },
+    {
+      target: "#mld-delete-btn",
+      content: "Delete a document using this button.",
+    },
+  ];
+
+  const [joyrideRun, setJoyrideRun] = useState(false);
+
+  // DOCUMENT MAPPING -> array
+  const mappedDocs = Object.entries(DOCUMENT_MAPPING)
+    .flatMap(([clause, entry]) =>
+      entry.docs.map((docName, index) => ({
+        clause,
+        docName,
+        department: entry.dept[index] || entry.dept[0],
+        type: entry.type[index] || entry.type[0],
+        uniqueClause: `${clause}__${docName}__${index}`,
+      }))
+    )
+    .filter((item) => {
+      if (!user || !user.department || !user.department.name) return true;
+      const userDept = user.department.name.trim();
+      if (userDept.toLowerCase() === "admin") return true;
+      return item.department === userDept;
+    });
+
+  const uniqueMappedDocs = Object.values(
+    mappedDocs.reduce((acc, item, index) => {
+      if (!acc[item.docName]) {
+        acc[item.docName] = { ...item, id: `doc-${index}` };
+      }
+      return acc;
+    }, {})
+  );
+
+  const [documents, setDocuments] = useState([]);
+  const [soas, setSoas] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState({});
+  const [hasUploaded, setHasUploaded] = useState({});
+  const [uploading, setUploading] = useState({});
+  const [uploadedCounts, setUploadedCounts] = useState({});
+  const [soaSearch, setSoaSearch] = useState("");
+  const [soaSort, setSoaSort] = useState("date_newest");
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState("");
+
+  const findDoc = (item) => {
+    if (!item) return undefined;
+    const nameMatches = documents.find(
+      (d) =>
+        (d.docName && d.docName === item.docName) ||
+        (d.name && d.name === item.docName)
+    );
+    if (nameMatches) return nameMatches;
+    const clauseMatches = documents.find(
+      (d) =>
+        String(d.clause) === String(item.uniqueClause) ||
+        String(d.soaId) === String(item.uniqueClause) ||
+        String(d.soa?.id) === String(item.uniqueClause) ||
+        String(d.soaIdString) === String(item.uniqueClause)
+    );
+    return clauseMatches;
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const user = JSON.parse(sessionStorage.getItem("user"));
+        const docs = (await documentationService.getDocuments()) || [];
+        const orgDocs = docs.filter(
+          (d) => d.organization === user?.organization
+        );
+        setDocuments(orgDocs);
+
+        const soaList = (await documentationService.getSoAEntries()) || [];
+        const orgSoas = (Array.isArray(soaList) ? soaList : []).filter(
+          (s) => s.organization === user?.organization
+        );
+        setSoas(orgSoas);
+
+        const counts = {};
+        orgSoas.forEach((s) => {
+          counts[s.id] = 0;
+        });
+        orgDocs.forEach((d) => {
+          const sid = d.soaId ?? d.soa?.id ?? d.soaIdString ?? null;
+          if (sid != null) counts[sid] = (counts[sid] ?? 0) + 1;
+        });
+        setUploadedCounts(counts);
+      } catch (error) {
+        console.error("Error loading data:", error);
+        setDocuments([]);
+        setSoas([]);
+        setUploadedCounts({});
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handlePreviewClick = (item) => {
+    const searchItem =
+      typeof item === "string" ? { docName: item, clause: item } : item;
+    const doc = findDoc(searchItem);
+    if (doc && doc.url) {
+      const baseUrl = "https://safesphere.duckdns.org/doc-service";
+      const filePath = doc.url.startsWith("/") ? doc.url : `/${doc.url}`;
+      const encodedPath = encodeURI(filePath);
+      const fullUrl = baseUrl + encodedPath;
+      setPreviewUrl(fullUrl);
+      setPreviewModalOpen(true);
+    } else {
+      setModal({
+        isOpen: true,
+        title: "No Document Found",
+        message: "No Document to preview",
+        showCancel: false,
+        onConfirm: () => setModal((m) => ({ ...m, isOpen: false })),
+      });
+    }
+  };
+
+  const closePreviewModal = () => {
+    setPreviewModalOpen(false);
+    setPreviewUrl("");
+  };
+
+  const userMappedDocs = documents.filter(
+    (item) =>
+      item.departmentName === user?.department?.name &&
+      item.organization === user.organization
+  );
+  const totalDocsToUpload = userMappedDocs.length;
+
+  const handleSingleButtonUpload = async (id) => {
+    const item = uniqueMappedDocs.find((d) => d.id === id);
+    if (!item) return;
+
+    const { uniqueClause, docName } = item;
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "*/*";
+    input.onchange = async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      try {
+        setUploading((prev) => ({ ...prev, [id]: true }));
+
+        await documentationService.uploadDocument({
+          file,
+          soaId: uniqueClause,
+          docName,
+          controlId: uniqueClause,
+          uploaderName: user?.name ?? "Unknown",
+          departmentName: user?.department?.name ?? "N/A",
+          organization: user?.organization,
+        });
+
+        const docs = (await documentationService.getDocuments()) || [];
+        const orgDocs = docs.filter(
+          (d) => d.organization === user?.organization
+        );
+        setDocuments(orgDocs);
+
+        const counts = {};
+        Object.keys(DOCUMENT_MAPPING).forEach((k) => (counts[k] = 0));
+        (orgDocs || []).forEach((d) => {
+          const sid = d.clause ?? d.soaId ?? d.soa?.id ?? d.soaIdString ?? null;
+          if (sid != null) counts[String(sid)] = (counts[String(sid)] ?? 0) + 1;
+        });
+        setUploadedCounts(counts);
+
+        setModal({
+          isOpen: true,
+          title: "Success",
+          message: "Document uploaded successfully!",
+          showCancel: false,
+          onConfirm: () => setModal((m) => ({ ...m, isOpen: false })),
+        });
+      } catch (err) {
+        console.error("Upload failed:", err);
+        setModal({
+          isOpen: true,
+          title: "Failure",
+          message: "Upload failed — please try again later.",
+          showCancel: false,
+          onConfirm: () => setModal((m) => ({ ...m, isOpen: false })),
+        });
+      } finally {
+        setUploading((prev) => ({ ...prev, [id]: false }));
+      }
+    };
+    input.click();
+  };
+
+  const handleDeleteForSoA = async (docId) => {
+    const orgId = user?.organization || user?.organizationId;
+    const doc = documents.find((d) => d.id === docId);
+    if (!doc) {
+      console.error("Document not found:", docId);
+      return;
+    }
+    if (doc.organization !== orgId) {
+      console.error("Cannot delete: belongs to another organization.");
+      return;
+    }
+
+    setModal({
+      isOpen: true,
+      title: "Confirm Delete",
+      message: "Are you sure you want to delete this document?",
+      showCancel: true,
+      onConfirm: async () => {
+        setModal((m) => ({ ...m, isOpen: false }));
+
+        try {
+          await documentationService.deleteDocument(docId);
+          const updatedDocs = documents.filter((d) => d.id !== docId);
+          setDocuments(updatedDocs);
+
+          const counts = {};
+          Object.keys(DOCUMENT_MAPPING).forEach((k) => (counts[k] = 0));
+          updatedDocs.forEach((d) => {
+            const clause = d.soaId?.split("__")[0];
+            if (clause) counts[clause] = (counts[clause] || 0) + 1;
+          });
+          setUploadedCounts(counts);
+
+          setModal({
+            isOpen: true,
+            title: "Success",
+            message: "Document Deleted",
+            showCancel: false,
+            onConfirm: () => setModal((m) => ({ ...m, isOpen: false })),
+          });
+        } catch (error) {
+          console.error("Delete failed:", error);
+          setModal({
+            isOpen: true,
+            title: "Failure",
+            message: "Delete failed — please try again.",
+            showCancel: false,
+            onConfirm: () => setModal((m) => ({ ...m, isOpen: false })),
+          });
+        }
+      },
+    });
+  };
+
+  const filteredAndSortedSoas = useMemo(() => {
+    let list = Array.isArray(soas) ? [...soas] : [];
+    if (soaSearch && soaSearch.trim() !== "") {
+      const q = soaSearch.trim().toLowerCase();
+      list = list.filter((s) => {
+        const ref = Array.isArray(s.documentRef)
+          ? s.documentRef.join(" ")
+          : s.documentRef ?? "";
+        return ref.toString().toLowerCase().includes(q);
+      });
+    }
+    if (soaSort === "date_newest" || soaSort === "date_oldest") {
+      list.sort((a, b) => {
+        const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return soaSort === "date_newest" ? bd - ad : ad - bd;
+      });
+    } else if (soaSort === "name") {
+      list.sort((a, b) => {
+        const an = (
+          Array.isArray(a.documentRef)
+            ? a.documentRef.join(", ")
+            : a.documentRef ?? ""
+        ).toLowerCase();
+        const bn = (
+          Array.isArray(b.documentRef)
+            ? b.documentRef.join(", ")
+            : b.documentRef ?? ""
+        ).toLowerCase();
+        return an.localeCompare(bn);
+      });
+    }
+    return list;
+  }, [soas, soaSearch, soaSort]);
+
+  const uniqueSoas = useMemo(() => {
+    const seen = new Set();
+    return filteredAndSortedSoas.filter((soa) => {
+      if (seen.has(soa.id)) return false;
+      seen.add(soa.id);
+      return true;
+    });
+  }, [filteredAndSortedSoas]);
+
+  const departmentFilteredSoAs = useMemo(() => {
+    if (!user?.department?.name) return uniqueSoas;
+    return uniqueSoas.filter((soa) => {
+      const docRefs = Array.isArray(soa.documentRef)
+        ? soa.documentRef
+        : [soa.documentRef];
+      return docRefs.some((ref) => {
+        for (const key in DOCUMENT_MAPPING) {
+          if (DOCUMENT_MAPPING[key].docs?.includes(ref)) {
+            const deptList = Array.isArray(DOCUMENT_MAPPING[key].dept)
+              ? DOCUMENT_MAPPING[key].dept
+              : [DOCUMENT_MAPPING[key].dept];
+            if (deptList.includes(user.department.name)) return true;
+          }
+        }
+        return false;
+      });
+    });
+  }, [uniqueSoas, user]);
+
+  const currentSoAs = departmentFilteredSoAs;
+  const getUploadedCount = (soaId) => uploadedCounts[soaId] ?? 0;
+
+  const { docCount, userDocs } = (() => {
+    const docsSet = new Set();
+    let docCount = 0;
+    documents.forEach((doc) => {
+      uniqueMappedDocs.forEach((soa) => {
+        if (
+          doc.uniqueClause === soa.uniqueClause &&
+          user.department.name === doc.departmentName &&
+          user.organization === doc.organization
+        )
+          docCount++;
+      });
+    });
+    currentSoAs.forEach((soa) => {
+      const refs = Array.isArray(soa.documentRef)
+        ? soa.documentRef
+        : [soa.documentRef];
+      refs.forEach((ref) => {
+        for (const key in DOCUMENT_MAPPING) {
+          if (
+            DOCUMENT_MAPPING[key].docs?.includes(ref) &&
+            DOCUMENT_MAPPING[key].dept.some((d) =>
+              user.department?.name.includes(d)
+            )
+          ) {
+            docsSet.add(ref);
+          }
+        }
+      });
+    });
+    return { docCount, userDocs: Array.from(docsSet) };
+  })();
+
+  return (
+    <div className="mld-page">
+      <style>{mldStyles}</style>
+
+      <Joyride
+        steps={joyrideSteps}
+        run={joyrideRun}
+        continuous
+        scrollToFirstStep
+        showSkipButton
+        styles={{ options: { zIndex: 10000 } }}
+        callback={(data) => {
+          const { status } = data;
+          if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
+            setJoyrideRun(false);
+          }
+        }}
+      />
+
+      <div className="mld-top-buttons">
+        <button
+          className="mld-btn mld-btn--tutorial"
+          style={{
+            transform: showButtons ? "translateY(0)" : "translateY(-100%)",
+            opacity: showButtons ? 1 : 0,
+          }}
+          onClick={() => setJoyrideRun(true)}
+        >
+          Tutorial
+        </button>
+
+        <button
+          className="mld-btn mld-btn--back"
+          style={{
+            transform: showButtons ? "translateY(0)" : "translateY(-100%)",
+            opacity: showButtons ? 1 : 0,
+          }}
+          onClick={() => history.push("/documentation")}
+        >
+          ← Back to Dashboard
+        </button>
+      </div>
+
+      <div id="mld-header" className="mld-header">
+        <h1 className="mld-header-title">Master List of Documents</h1>
+        <p className="mld-header-sub">Upload and manage your documents</p>
+        <div className="mld-header-stats">
+          <div>
+            <span style={{ fontWeight: 600 }}>Total Documents to Upload:</span>{" "}
+            {uniqueMappedDocs.length}
+          </div>
+          <div>
+            <span style={{ fontWeight: 600 }}>Documents Uploaded:</span>{" "}
+            {totalDocsToUpload}
+          </div>
+        </div>
+      </div>
+
+      <div className="mld-controls-row">
+        <div className="mld-controls-left">
+          <input
+            type="text"
+            placeholder="Search Document Ref..."
+            value={soaSearch}
+            onChange={(e) => {
+              setSoaSearch(e.target.value);
+            }}
+            id="mld-search"
+            className="mld-search"
+          />
+          <select
+            value={soaSort}
+            onChange={(e) => {} /* keep if you later re-use */}
+            id="mld-sort"
+            className="mld-select"
+            onInput={(e) => setSoaSort(e.target.value)}
+          >
+            <option value="date_newest">Date (Newest)</option>
+            <option value="date_oldest">Date (Oldest)</option>
+            <option value="name">Name (A → Z)</option>
+          </select>
+        </div>
+        <div className="mld-controls-right">
+          Showing {uniqueMappedDocs.length} upload entries
+        </div>
+      </div>
+
+      <div className="mld-card">
+        <h2 className="mld-card-title">Upload Documents</h2>
+
+        <div className="mld-table-wrapper">
+          <table id="mld-upload-table" className="mld-table">
+            <thead>
+              <tr>
+                <th className="mld-th" style={{ width: "4%" }}>
+                  #
+                </th>
+                <th className="mld-th" style={{ width: "25%" }}>
+                  Document Name
+                </th>
+                <th className="mld-th" style={{ width: "15%" }}>
+                  Doc Owner
+                </th>
+                <th className="mld-th" style={{ width: "15%" }}>
+                  Uploader Name
+                </th>
+                <th className="mld-th" style={{ width: "12%" }}>
+                  Approval Date
+                </th>
+                <th className="mld-th" style={{ width: "12%" }}>
+                  Next Approval Date
+                </th>
+                <th className="mld-th" style={{ width: "10%" }}>
+                  Upload File
+                </th>
+                <th className="mld-th" style={{ width: "7%" }}>
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {mappedDocs.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="8"
+                    style={{
+                      textAlign: "center",
+                      padding: "18px",
+                      color: "#7f8c8d",
+                    }}
+                  >
+                    No SoA entries found
+                  </td>
+                </tr>
+              ) : (
+                uniqueMappedDocs.map((item, idx) => {
+                  const doc = findDoc(item);
+                  const hasUploadedFlag = !!doc;
+
+                  const approvalDate = doc?.approvalDate
+                    ? new Date(doc.approvalDate).toISOString().split("T")[0]
+                    : "—";
+
+                  const nextApprovalDate = doc?.nextApprovalDate
+                    ? new Date(doc.nextApprovalDate)
+                        .toISOString()
+                        .split("T")[0]
+                    : "—";
+
+                  const handleApprove = async () => {
+                    if (!doc) return;
+                    const today = new Date();
+                    const nextDate = new Date();
+                    nextDate.setDate(today.getDate() + 365);
+                    try {
+                      const updatedDoc =
+                        await documentationService.updateApprovalDate(
+                          doc.id,
+                          today.getTime(),
+                          nextDate.getTime()
+                        );
+                      setDocuments((prevDocs) =>
+                        prevDocs.map((d) => (d.id === doc.id ? updatedDoc : d))
+                      );
+                      setModal({
+                        isOpen: true,
+                        title: "Success",
+                        message: "Document Approved",
+                        showCancel: false,
+                        onConfirm: () =>
+                          setModal((m) => ({ ...m, isOpen: false })),
+                      });
+                    } catch (err) {
+                      console.error(err);
+                      setModal({
+                        isOpen: true,
+                        title: "Failed",
+                        message: "Approval Failed",
+                        showCancel: false,
+                        onConfirm: () =>
+                          setModal((m) => ({ ...m, isOpen: false })),
+                      });
+                    }
+                  };
+
+                  return (
+                    <tr
+                      key={item.id}
+                      style={{ borderBottom: "1px solid #f1f1f1" }}
+                    >
+                      <td className="mld-cell-index">{idx + 1}</td>
+
+                      <td
+                        className="mld-cell-doc"
+                        onClick={() => handlePreviewClick(item)}
+                      >
+                        {item.docName}
+                      </td>
+
+                      <td className="mld-cell-center">
+                        {item.department || "—"}
+                      </td>
+
+                      <td className="mld-cell-center">
+                        {doc?.uploaderName ?? "—"}
+                      </td>
+
+                      <td className="mld-cell-center">{approvalDate}</td>
+
+                      <td className="mld-cell-center">{nextApprovalDate}</td>
+
+                      <td className="mld-cell-center">
+                        <button
+                          onClick={() => handleSingleButtonUpload(item.id)}
+                          id="mld-upload-btn"
+                          className="mld-upload-btn"
+                          style={{
+                            backgroundColor: hasUploadedFlag
+                              ? "#2ecc71"
+                              : "#f1f1f1",
+                            color: hasUploadedFlag ? "#fff" : "inherit",
+                          }}
+                          disabled={hasUploadedFlag || uploading[item.id]}
+                        >
+                          {uploading[item.id] ? (
+                            <>
+                              <UploadCloud
+                                size={16}
+                                style={{ marginRight: 4 }}
+                              />
+                              Uploading…
+                            </>
+                          ) : hasUploadedFlag ? (
+                            <Check
+                              size={20}
+                              style={{
+                                marginRight: "25px",
+                                marginLeft: "25px",
+                              }}
+                            />
+                          ) : (
+                            <>
+                              <UploadCloud
+                                size={16}
+                                style={{ marginRight: 4 }}
+                              />
+                              Upload
+                            </>
+                          )}
+                        </button>
+                      </td>
+
+                      <td className="mld-actions-cell">
+                        {hasUploadedFlag && (
+                          <>
+                            {doc?.approvalDate ? (
+                              <div className="mld-approved-label">
+                                Approved
+                              </div>
+                            ) : (
+                              user?.role === "risk_owner" && (
+                                <button
+                                  id="mld-approve-btn"
+                                  onClick={handleApprove}
+                                  className="mld-approve-btn"
+                                >
+                                  <Calendar
+                                    size={16}
+                                    style={{ marginRight: 4 }}
+                                  />
+                                  Approve
+                                </button>
+                              )
+                            )}
+
+                            <button
+                              id="mld-delete-btn"
+                              onClick={() => handleDeleteForSoA(doc.id)}
+                              className="mld-delete-btn"
+                            >
+                              <Trash2 size={22} />
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {previewModalOpen && (
+        <div className="mld-preview-overlay">
+          <div className="mld-preview-dialog">
+            <button
+              onClick={closePreviewModal}
+              className="mld-preview-close"
+            >
+              ×
+            </button>
+            <iframe
+              src={previewUrl}
+              title="Preview Document"
+              style={{ width: "100%", height: "100%", border: "none" }}
+            />
+          </div>
+        </div>
+      )}
+
+      <Modal
+        isOpen={modal.isOpen}
+        title={modal.title}
+        message={modal.message}
+        onClose={() => setModal((m) => ({ ...m, isOpen: false }))}
+        onConfirm={modal.onConfirm}
+        showCancel={modal.showCancel}
+      />
+    </div>
+  );
+};
+
+export default MLD;
