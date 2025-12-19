@@ -333,10 +333,10 @@ const TextScrollAnimation = () => {
       transition={{ delay: 0.45, duration: 0.5 }}
       className="mt-16 flex flex-col sm:flex-row gap-6"
     >
-      <button className="px-10 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold shadow-lg hover:shadow-2xl hover:scale-[1.03] transition">
-        Get Started
+      <button className="px-10 py-4 rounded-xl bg-gradient-to-r from-indigo-700 to-purple-800 text-white font-semibold shadow-lg hover:shadow-2xl hover:scale-[1.03] transition">
+        Book A Demo
       </button>
-      <button className="px-10 py-4 rounded-xl border border-gray-300 bg-white text-gray-900 font-semibold hover:bg-gray-100 hover:scale-[1.02] transition">
+      <button className="px-10 py-4 rounded-xl border border-gray-300 bg-white text-gray-900 font-semibold hover:bg-cyan-100 hover:scale-[1.02] transition">
         Explore Platform
       </button>
     </motion.div>
